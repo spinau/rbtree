@@ -13,6 +13,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stddef.h>
+#include <unistd.h>
 #include <errno.h>
 
 #include "rbtree.h"
@@ -138,16 +139,19 @@ int
 main(int ac, char *av[])
 {
     struct rb_root T = {0};
+    char *fname;
     Root = &T;
 
     FILE *f;
     if (ac == 2) { // read from file 
-        if ((f = fopen(av[1], "r")) == NULL) {
+        if ((f = fopen(fname = av[1], "r")) == NULL) {
             fprintf(stderr, "can't open %s (%s)\n", av[1], strerror(errno));
             return 1;
         }
-    } else
+    } else {
         f = stdin;
+        fname = "";
+    }
 
     char buf[80];
     while (fgets(buf, sizeof(buf), f) == buf)
@@ -177,12 +181,16 @@ main(int ac, char *av[])
 digraph {\n\
 node [style=filled,fillcolor=black,fontcolor=white,shape=circle,fontsize=10,fixedsize=true]\n\
 edge [arrowstyle=normal,arrowsize=.5,penwidth=.3]\n\
-    ");
+label = \"%s\"\n\
+labelloc = \"t\"\n\
+    ", fname);
     tree_graph(Root->rb_node);
     fprintf(dotf, "}\n");
     fclose(dotf);
 
-    system("dot tree.dot | xdot -");
-
+    if (fork() == 0)
+        system("dot tree.dot | xdot -");
+    // else error or parent proc
+    
     return 0;
 }
