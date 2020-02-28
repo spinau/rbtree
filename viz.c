@@ -123,7 +123,7 @@ main(int ac, char *av[])
             k += insert_node(atoi(buf));
         // else ignore line
 
-    fclose(f);
+    if (f != stdin) fclose(f);
     fprintf(stderr, "node count=%d, max depth=%d\n", k, depth(Root->rb_node));
     if (k < 2) // tree_graph needs at least 2 nodes
         return 0;
