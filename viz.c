@@ -1,6 +1,7 @@
 // viz [ file ]
 
-// read a list of integers and display them as a 
+// read a list of integers to insert (or delete if
+// preceded with 'd') and display them as a 
 // red-black tree representation using graphviz
 // cc -o viz viz.c rbtree.o
 
@@ -22,6 +23,7 @@ struct data {
 };
 
 struct rb_root *Root;
+int ncount = 0;
 
 // container_of shorthand:
 #define rb_container(n) container_of((n), struct data, node)
@@ -55,6 +57,37 @@ insert_node(int key)
     rb_link_node(&new->node, parent, p); 
     rb_insert(&new->node, Root);
     return 1;
+}
+
+struct data *
+find_node(int key)
+{
+	struct rb_node *n = Root->rb_node;
+
+    while (n) {
+        struct data *t = rb_container(n);
+        int cmp = key - t->key;
+        if (cmp < 0)
+            n = n->rb_left;
+        else if (cmp > 0)
+            n = n->rb_right;
+        else
+            return t;
+    }
+    return NULL;
+}
+
+// delink and free node with matching key
+void
+delete_node(int key)
+{
+    struct data *n = find_node(key);
+    if (n) {
+        rb_erase(&n->node, Root);
+        free(n);
+        --ncount;
+    } else
+        ;//printf("delete_node(%d): key not found\n", key);
 }
 
 FILE *dotf;
@@ -116,16 +149,22 @@ main(int ac, char *av[])
     } else
         f = stdin;
 
-    int k = 0;
     char buf[80];
     while (fgets(buf, sizeof(buf), f) == buf)
-        if (isdigit(buf[0]) || buf[0] == '-')
-            k += insert_node(atoi(buf));
-        // else ignore line
+        switch (buf[0]) {
+        default:
+            if (isdigit(buf[0]) || buf[0] == '-')
+                ncount += insert_node(atoi(buf));
+            // else ignore line
+            break;
+        case 'd':
+            delete_node(atoi(&buf[1]));
+            break;
+        } 
 
     if (f != stdin) fclose(f);
-    fprintf(stderr, "node count=%d, max depth=%d\n", k, depth(Root->rb_node));
-    if (k < 2) // tree_graph needs at least 2 nodes
+    fprintf(stderr, "node count=%d, max depth=%d\n", ncount, depth(Root->rb_node));
+    if (ncount < 2) // tree_graph needs at least 2 nodes
         return 0;
 
     if ((dotf = fopen("tree.dot", "w")) == NULL) {
